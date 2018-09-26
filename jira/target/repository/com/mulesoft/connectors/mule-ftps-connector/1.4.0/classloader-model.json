@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "artifactCoordinates": {
+    "groupId": "com.mulesoft.connectors",
+    "artifactId": "mule-ftps-connector",
+    "version": "1.4.0",
+    "type": "jar",
+    "classifier": "mule-plugin"
+  },
+  "dependencies": [
+    {
+      "artifactCoordinates": {
+        "groupId": "org.mule.connectors",
+        "artifactId": "mule-ftp-connector",
+        "version": "1.2.2",
+        "type": "jar",
+        "classifier": "mule-plugin"
+      },
+      "uri": "repository/org/mule/connectors/mule-ftp-connector/1.2.2/mule-ftp-connector-1.2.2-mule-plugin.jar"
+    },
+    {
+      "artifactCoordinates": {
+        "groupId": "org.mule.modules",
+        "artifactId": "mule-module-file-extension-common",
+        "version": "1.2.0",
+        "type": "jar",
+        "classifier": "mule-plugin"
+      },
+      "uri": "repository/org/mule/modules/mule-module-file-extension-common/1.2.0/mule-module-file-extension-common-1.2.0-mule-plugin.jar"
+    }
+  ]
+}
