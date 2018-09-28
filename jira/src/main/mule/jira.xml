@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
-	xmlns:ftps="http://www.mulesoft.org/schema/mule/ftps"
-	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+<mule xmlns:sftp="http://www.mulesoft.org/schema/mule/sftp" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:ftps="http://www.mulesoft.org/schema/mule/ftps" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
 http://www.mulesoft.org/schema/mule/ftps http://www.mulesoft.org/schema/mule/ftps/current/mule-ftps.xsd
 http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd
-http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/sftp http://www.mulesoft.org/schema/mule/sftp/current/mule-sftp.xsd">
 	<http:listener-config name="JIRA_HTTP_Config" doc:name="HTTP Listener config" doc:id="4d1f6d27-97a1-4b55-a7be-663db76971e5" >
 		<http:listener-connection host="0.0.0.0" port="8081" />
 	</http:listener-config>
@@ -22,15 +23,27 @@ http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/
 		</ftps:connection>
 	</ftps:config>
 	<configuration-properties doc:name="Configuration properties" doc:id="85112045-663a-4d96-b861-d19bd84cd101" file="PROD.properties" />
+	<sftp:config name="SFTP_Config" doc:name="SFTP Config" doc:id="48b9e767-4f45-49fc-9fcc-33bbf52ce1ca" >
+		<sftp:connection host="dot.it.wsu.edu" username="${sftp.User}" password="${sftp.password}" >
+			<sftp:preferred-authentication-methods >
+				<sftp:preferred-authentication-method value="PASSWORD" />
+			</sftp:preferred-authentication-methods>
+		</sftp:connection>
+	</sftp:config>
 	<flow name="jiraFlow" doc:id="f10a9a5d-cfe3-4ade-97f2-7aa367be5e95" >
 		<http:listener doc:name="HTTP : JIRA" doc:id="c263972a-2bca-4d0d-b605-8bcc3b63fbf2" config-ref="JIRA_HTTP_Config" path="/jira"/>
-		<ftps:list doc:name="List" doc:id="072d5d3a-0589-475e-89cb-de82e25790fc" config-ref="FTPS_Config" directoryPath="SFS Service Desk">
-			<ftps:matcher filenamePattern="*.csv" />
-		</ftps:list>
-		<foreach doc:name="For Each" doc:id="dee77df7-9d04-4926-b87d-1517d284c134" collection="payload.*payload">
-			<ee:transform doc:name="Transform Message" doc:id="2144e658-c8e2-4941-8f4b-2e5ed4396718" >
-				<ee:message >
-					<ee:set-payload ><![CDATA[%dw 2.0
+		<sftp:list doc:name="CSV Files in a directory" doc:id="113f0d32-2802-4b49-a8e1-abb873e4db11" config-ref="SFTP_Config" directoryPath="SFS Service Desk">
+			<sftp:matcher filenamePattern="*.csv" />
+		</sftp:list>
+		<flow-ref doc:name="JIRA::Leaf=ForEach=TransformPayloadToJSON" doc:id="239e903b-4d2a-4a5c-81c1-9e3a4eb6eb4b" name="JIRA::Leaf=ForEach=TransformPayloadToJSON"/>
+		<flow-ref doc:name="JIRA::Leaf=ForEach=MoveFilesToArchive" doc:id="5253c438-7c0c-4750-ae16-f192f6dc9af7" name="JIRA::Leaf=ForEach=MoveFilesToArchive"/>
+		<logger level="INFO" doc:name="Logger" doc:id="101d9c33-5bd0-4808-909e-6fa722ed9ab3" message="Files processed" />
+	</flow>
+	<sub-flow doc:id="e80adf2e-1205-445c-80ed-e051e04bad96" name="JIRA::Leaf=ForEach=TransformPayloadToJSON">
+		<foreach doc:name="For Each distinct JIRA Issue" doc:id="dee77df7-9d04-4926-b87d-1517d284c134" collection="payload.*payload">
+			<ee:transform doc:name="as JSON" doc:id="2144e658-c8e2-4941-8f4b-2e5ed4396718">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
 output application/json
 ---
 issueUpdates: vars.rootMessage.payload[vars.counter-1].payload map ((object, index)-> {
@@ -56,9 +69,20 @@ issueUpdates: vars.rootMessage.payload[vars.counter-1].payload map ((object, ind
 	}
 })]]></ee:set-payload>
 				</ee:message>
+				<ee:variables>
+					<ee:set-variable variableName="file"><![CDATA[%dw 2.0
+output application/java
+---
+{
+	
+}]]></ee:set-variable>
+				</ee:variables>
 			</ee:transform>
-			<logger level="INFO" doc:name="Logger" doc:id="d8ea29f6-d56d-4af1-9cdd-d52cdba6f16a" message="if"/>
 		</foreach>
-		<logger level="INFO" doc:name="Logger" doc:id="101d9c33-5bd0-4808-909e-6fa722ed9ab3" message="#[payload]" />
-	</flow>
+	</sub-flow>
+	<sub-flow name="JIRA::Leaf=ForEach=MoveFilesToArchive" doc:id="b9fd26b7-a72a-435d-a3e1-4537137259d9" >
+		<foreach doc:name="For Each File in Source Directory" doc:id="01722428-8964-4256-a66b-3e6476a4728a" collection="payload.*payload">
+			<sftp:move doc:name="payload.attributes.path to Archive" doc:id="0203731d-842c-44af-97a2-6d0482ff9f29" config-ref="SFTP_Config" sourcePath="#[vars.rootMessage.payload[vars.counter-1].attributes.path]" targetPath="${input_jira.path.archive}" />
+		</foreach>
+	</sub-flow>
 </mule>
