@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	
+	<munit:config name="jira-test-suite.xml" />
+	<munit:test name="jira-test-suite-JIRA::Leaf=ForEach=TransformPayloadToJSONTest" description="Test" doc:id="0a45777d-6b65-4a8e-8d25-db1ebd220d53" >
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="807f118a-610f-459a-9c2e-112de9364f97" >
+				<munit:payload mediaType="application/json" value='#[MunitTools::getResourceAsString("mockResources/data-sample.json")]'/>
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to JIRA::Leaf=ForEach=TransformPayloadToJSON" doc:id="cb4ad348-c2b0-41cd-a770-249d26bda06f" name="JIRA::Leaf=ForEach=TransformPayloadToJSON"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="a4390795-7e4d-41f2-bb1a-08cd2386ee78" expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="jira-test-suiteTest" description="MUnit Test" doc:id="6f7a31e5-c93f-4591-84d8-9f5280d01a32" >
+		<munit:execution >
+			<munit:set-event doc:name="Set Event" doc:id="d660a440-b22f-41bd-bd4c-000ae4cf0056" >
+				<munit:payload value='#[MunitTools::getResourceAsString("mockResources/jira-sample.json")]' mediaType="application/json"/>
+			</munit:set-event>
+			<flow-ref doc:name="Flow-ref to JIRA::LEAF=PostToJIRAAPI" doc:id="f841be37-7f2b-4af5-815a-19ef40d3b1e3" name="JIRA::LEAF=PostToJIRAAPI"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="a3646fa1-7154-4ad2-a63a-f7c484b8385f" expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="jira-test-suiteTest1" description="MUnit Test" doc:id="3a15a89a-8e89-438f-b4b9-40f108b8c837" >
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="Mock when" doc:id="f99be11c-5fa8-45ac-841f-fa3742532f80" processor="http:request">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute attributeName="doc:name" whereValue="HTTP : JIRA" />
+					<munit-tools:with-attribute attributeName="path" whereValue="/jira" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<flow-ref doc:name="Flow-ref to jiraFlow" doc:id="04a582e9-c5d5-45c7-91a0-c7e54fbb4ae5" name="jiraFlow"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="cee88cb2-33a0-4e9a-be90-796a93a9fff3" expression="#[payload]" is="#[MunitTools::notNullValue()]"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>
